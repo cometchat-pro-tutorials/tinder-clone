@@ -25,7 +25,6 @@ module.exports = function ({ app, dbConn, upload }) {
               if (err) {
                 res.status(200).jsonp({ message: "Cannot create your account, please try again" });
               } else {
-                console.log(result);
                 res.status(200).jsonp({ avatar, insertId: result.insertId });
               }
             });

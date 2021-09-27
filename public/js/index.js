@@ -534,18 +534,14 @@ window.addEventListener("DOMContentLoaded", function () {
           document.getElementById("callScreen"),
           new CometChat.OngoingCallListener({
                 onUserListUpdated: userList => {
-                    console.log("user list:", userList);
             },
             onCallEnded: call => {
-              console.log("Call ended:", call);
               callScreen.classList.remove('on-stack');
               callScreen.classList.add("bottom-stack");
             },
             onError: error => {
-              console.log("Error :", error);
             },
             onMediaDeviceListUpdated: deviceList => {
-              console.log("Device List:", deviceList);
             },
           })
         );
