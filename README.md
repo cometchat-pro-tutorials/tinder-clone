@@ -32,7 +32,7 @@ To run the demo follow these steps:
 5. Also copy the **REST_API_KEY** from the API & Auth Key tab.
 6. Navigate to the Users tab, and delete all the default users and groups leaving it clean **(very important)**.
 7. Download the repository [here](https://github.com/hieptl/tinder-clone/archive/main.zip) or by running `git clone https://github.com/hieptl/tinder-clone.git` and open it in a code editor.
-8. Create a file called **config.js** in the ”js” folder of your project.
+8. Create a file called **config.js** in the ”public/js” folder of your project.
 9. Import and inject your secret keys in the **config.js** file containing your CometChat in this manner.
 
 ```js
@@ -44,8 +44,27 @@ const config = {
   CometChatWidgetId: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
 };
 ```
-
-11. Make sure to include this file in your gitIgnore file from being exposed online.
+10. We will use the MySQL database. For this reason, this section describes how to create the database and its table. Before proceeding, you need to make sure that you have installed the MySQL database on your computer already. To create the database and its table, you need to get the tinder_clone.sql and run it.
+11. Create .env file and replace the below information with the information of your database connection.
+```js
+PORT=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+DB_HOST=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+DB_USER_NAME=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+DB_USER_PASSWORD=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+DB_NAME=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+DB_PORT=xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
+```
+12. Install all the dependencies of the applicatoin by running
+```js
+npm install
+```
+13. Because we are installing the nodemon library. Therefore you can run one of the follow statements to run your project.
+```js
+node index.js 
+or 
+npx nodemon index.js
+```
+14. Make sure to include the .env file and the config.js file in your gitIgnore file from being exposed online.
 
 Questions about running the demo? [Open an issue](https://github.com/hieptl/tinder-clone/issues). We're here to help ✌️
 
