@@ -898,3 +898,84 @@ input {
 .bottom-stack {
   z-index: -1;
 }
+
+/* The Modal (background) */
+.calling {
+  background-color: rgba(255, 255, 255, 0.8);
+  display: block; /* Hidden by default */
+  height: 100%; /* Full height */
+  left: 0;
+  /* overflow: auto; */
+  position: fixed; /* Stay in place */
+  top: 0;
+  width: 100%; /* Full width */
+  z-index: 56; /* Sit on top */
+}
+
+.calling--hide {
+  display: none;
+}
+
+/* Modal Content/Box */
+.calling__content {
+  background-color: #fefefe;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%), 0 8px 16px rgb(0 0 0 / 10%);
+  margin: 15% auto; /* 15% from the top and centered */
+  margin-top: 5%;
+  width: 35rem; /* Could be more or less, depending on screen size */
+}
+
+.calling__container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+#calling__container {
+  padding: 1.25rem;
+}
+
+#calling__container button { 
+  border: none;
+  outline: none;
+  padding: 0.5rem 0.75rem;
+  font-weight: bold;
+  color: white;
+  margin-right: 0.5rem;
+}
+
+#calling__container button:hover {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.calling__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding: 1.25rem 0 0.5rem 1.25rem;
+}
+
+.calling__close {
+  align-items: center;
+  display: grid;
+  justify-items: right;
+  padding: 1.25rem 1.25rem 0.5rem 0;
+}
+
+.calling__close img:hover {
+  cursor: pointer;
+}
+
+.calling__subtitle {
+  background: #e5e7eb;
+  height: 1px;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.rejected {
+  background: #F87171;
+}
+
+.accepted {
+  background: #60A5FA;
+}

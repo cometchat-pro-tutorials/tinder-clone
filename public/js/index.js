@@ -40,11 +40,133 @@ window.addEventListener("DOMContentLoaded", function () {
     const messageContainer = document.getElementById("message__container");
 
     // call
+    const callingDialog = document.getElementById("calling");
+    const acceptCallBtn = document.getElementById("accept-call");
+    const rejectCallBtn = document.getElementById("reject-call");
     const audioCallBtn = document.getElementById("audio-call");
     const videoCallBtn = document.getElementById("video-call");
     const callScreen = document.getElementById("callScreen");
 
+    let listenerID = null;
+    let upcomingCall=  null;
     let selectedContact = null;
+
+    const rejectCall = (status, sessionId) => {
+      CometChat.rejectCall(sessionId, status).then(
+        call => {
+          console.log("Call rejected successfully", call);
+          hideCallingDialog();
+          upcomingCall = null;
+        },
+        error => {
+          console.log("Call rejection failed with error:", error);
+        }
+      );
+    }
+
+    const showCallingDialog = () => {
+      callingDialog.classList.remove("calling--hide");
+    };
+
+    const hideCallingDialog = () => {
+      callingDialog.classList.add("calling--hide");
+    };
+
+    const listenForCall = () => { 
+      listenerID = uuid.v4();
+      CometChat.addCallListener(
+        listenerID,
+        new CometChat.CallListener({
+          onIncomingCallReceived(call) {
+            console.log("Incoming call:", call);
+            upcomingCall = call;
+            // Handle incoming call
+            showCallingDialog();
+          },
+          onOutgoingCallAccepted(call) {
+            console.log("Outgoing call accepted:", call);
+            // Outgoing Call Accepted
+            hideCallingDialog();
+          },
+          onOutgoingCallRejected(call) {
+            console.log("Outgoing call rejected:", call);
+            // Outgoing Call Rejected
+            hideCallingDialog();
+          },
+          onIncomingCallCancelled(call) {
+            console.log("Incoming call calcelled:", call);
+            hideCallingDialog();
+          }
+        })
+      );
+    };
+
+    const startCall = (call) => {
+      callScreen.classList.remove('bottom-stack');
+      callScreen.classList.add('on-stack');
+      const sessionId = call.sessionId;
+      const callType = call.type;
+      const callSettings = new CometChat.CallSettingsBuilder()
+                                          .setSessionID(sessionId)
+                                          .enableDefaultLayout(true)
+                                          .setIsAudioOnlyCall(callType == 'audio' ? true : false)
+                                          .build();
+      CometChat.startCall(
+        callSettings,
+        document.getElementById("callScreen"),
+        new CometChat.OngoingCallListener({
+          onUserJoined: user => {
+            /* Notification received here if another user joins the call. */
+            console.log("User joined call:", user);
+            /* this method can be use to display message or perform any actions if someone joining the call */
+          },
+          onUserLeft: user => {
+            /* Notification received here if another user left the call. */
+            console.log("User left call:", user);
+            /* this method can be use to display message or perform any actions if someone leaving the call */
+          },
+          onUserListUpdated: userList => {
+            console.log("user list:", userList);
+          },
+          onCallEnded: call => {
+            /* Notification received here if current ongoing call is ended. */
+            console.log("Call ended:", call);
+            /* hiding/closing the call screen can be done here. */
+            callScreen.classList.add('bottom-stack');
+            callScreen.classList.remove('on-stack');
+            const status = CometChat.CALL_STATUS.CANCELLED;
+            rejectCall(status, call.sessionId);
+          },
+          onError: error => {
+            console.log("Error :", error);
+            /* hiding/closing the call screen can be done here. */
+          },
+          onMediaDeviceListUpdated: deviceList => {
+            console.log("Device List:", deviceList);
+          },
+        })
+      );
+    };
+
+    const initCall = (inputCallType) => {
+      if (selectedContact && selectedContact.uid) {
+        const callType = inputCallType;
+        const receiverType = CometChat.RECEIVER_TYPE.USER;
+
+        const call = new CometChat.Call(selectedContact.uid, callType, receiverType);
+
+        CometChat.initiateCall(call).then(
+          outGoingCall => {
+            console.log("Call initiated successfully:", outGoingCall);
+            // perform action on success. Like show your calling screen.
+            startCall(call);
+          },
+          error => {
+            console.log("Call initialization failed with exception:", error);
+          }
+        );
+      }
+    };
 
     const scrollToBottom = () => {
       if (messageBottom && messageBottom) {
@@ -117,7 +239,7 @@ window.addEventListener("DOMContentLoaded", function () {
     const renderMessages = (messages) => {
       if (messages && messages.length !== 0) {
         messages.forEach(message => { 
-          if (message) {
+          if (message && (!message.category || message.category !== 'call')) {
             renderSingleMessage(message);
           }
         });
@@ -152,7 +274,9 @@ window.addEventListener("DOMContentLoaded", function () {
           selectedContact.uid,
           new CometChat.MessageListener({
             onTextMessageReceived: (message) => {
-              renderSingleMessage(message);
+              if (message && (!message.category || message.category !== 'call')) {
+                renderSingleMessage(message);
+              }
             },
           })
         );
@@ -168,6 +292,7 @@ window.addEventListener("DOMContentLoaded", function () {
         messageContainer.innerHTML = '';
         loadMessages();
         listenForMessages();
+        listenForCall();
       }
     }
 
@@ -271,6 +396,9 @@ window.addEventListener("DOMContentLoaded", function () {
       const matchRequestTo = $(element).attr('data-id');
       const matchRequestReceiver = $(element).attr('data-name');
       createMatchRequest(matchRequestTo, matchRequestReceiver);
+      setTimeout(() => {
+        shouldHideMainCard();  
+       }, 1100);
     };
 
     const swipeLeft = (element) => {
@@ -278,6 +406,9 @@ window.addEventListener("DOMContentLoaded", function () {
       $('.main__card-item').find('.status').remove();
       $(element).append('<div class="status dislike">Dislike!</div>');
       $(element).next().removeClass('rotate-left rotate-right').fadeIn(400);
+      setTimeout(() => {
+        shouldHideMainCard();  
+       }, 1100);
     };
 
     const applySwing = () => {
@@ -472,9 +603,6 @@ window.addEventListener("DOMContentLoaded", function () {
         const currentCard = getCurrentCard();
         if (currentCard) {
           swipeLeft(currentCard);
-          setTimeout(() => {
-            shouldHideMainCard();  
-           }, 1100);
         } else {
           hideMainCard();
         }
@@ -500,7 +628,10 @@ window.addEventListener("DOMContentLoaded", function () {
         messageContainer.innerHTML = '';
         chatBox.classList.add("hide");
         CometChat.removeMessageListener(selectedContact.uid);
+        CometChat.removeCallListener(listenerID);
         selectedContact = null;
+        upcomingCall = null;
+        listenerID = null;
       });
     }
 
@@ -516,35 +647,37 @@ window.addEventListener("DOMContentLoaded", function () {
 
     if (audioCallBtn) {
       audioCallBtn.addEventListener('click', function () {
-        const sessionID = sessionStorage.getItem("sessionId");
-        let audioOnly = false;
-        let deafaultLayout = true;
+        initCall(CometChat.CALL_TYPE.AUDIO);
+      });
+    }
 
-        callScreen.classList.remove('bottom-stack');
-        callScreen.classList.add("on-stack");
+    if (videoCallBtn) {
+      videoCallBtn.addEventListener('click', function () { 
+        initCall(CometChat.CALL_TYPE.VIDEO);
+      });
+    }
 
-        let callSettings = new CometChat.CallSettingsBuilder()
-                            .enableDefaultLayout(deafaultLayout)
-                            .setSessionID(sessionID)
-                            .setIsAudioOnlyCall(audioOnly)
-                            .build();
-
-        CometChat.startCall(
-          callSettings,
-          document.getElementById("callScreen"),
-          new CometChat.OngoingCallListener({
-                onUserListUpdated: userList => {
-            },
-            onCallEnded: call => {
-              callScreen.classList.remove('on-stack');
-              callScreen.classList.add("bottom-stack");
-            },
-            onError: error => {
-            },
-            onMediaDeviceListUpdated: deviceList => {
-            },
-          })
+    if (acceptCallBtn) {
+      acceptCallBtn.addEventListener('click', function () {
+        CometChat.acceptCall(upcomingCall.sessionId).then(
+          call => {
+            console.log("Call accepted successfully:", call);
+            // start the call using the startCall() method
+            hideCallingDialog();
+            startCall(upcomingCall);
+          },
+          error => {
+            console.log("Call acceptance failed with error", error);
+            // handle exception
+          }
         );
+      });
+    }
+
+    if (rejectCallBtn) {
+      rejectCallBtn.addEventListener('click', function () { 
+        const status = CometChat.CALL_STATUS.REJECTED;
+        rejectCall(status, upcomingCall.sessionId);
       });
     }
 
