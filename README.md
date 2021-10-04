@@ -40,8 +40,7 @@ const config = {
   CometChatAppId: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
   CometChatRegion: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
   CometChatAuthKey: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
-  CometChatAPIKey: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
-  CometChatWidgetId: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx,
+  CometChatAPIKey: xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx
 };
 ```
 10. We will use the MySQL database. For this reason, this section describes how to create the database and its table. Before proceeding, you need to make sure that you have installed the MySQL database on your computer already. To create the database and its table, you need to get the tinder_clone.sql and run it.
