@@ -1,4 +1,4 @@
-module.exports = function ({ app, dbConn, upload }) {
+module.exports = function ({ app, dbConn, upload, constants }) {
   app.post("/users/create", upload.single("avatar"), (req, res, next) => {
     // validate the avatar. The avatar is requied.
     const file = req.file;
@@ -56,8 +56,8 @@ module.exports = function ({ app, dbConn, upload }) {
   app.post('/users/recommend', (req, res) => {
     const { gender, ccUid } = req.body;
     if (gender && ccUid) {
-      const sql = "SELECT * FROM user_account WHERE user_gender = ? AND (user_cometchat_uid NOT IN (SELECT match_request_to FROM match_request WHERE match_request_from = ? OR match_request_to = ?) AND user_cometchat_uid NOT IN (SELECT match_request_from FROM match_request WHERE match_request_from = ? OR match_request_to = ?))";
-      dbConn.query(sql, [gender, ccUid, ccUid, ccUid, ccUid], function (err, result) {
+      const sql = "SELECT * FROM user_account WHERE user_gender = ? AND (user_cometchat_uid NOT IN (SELECT match_request_to FROM match_request WHERE match_request_from = ?) AND user_cometchat_uid NOT IN (SELECT match_request_from FROM match_request WHERE match_request_to = ? AND match_request_status = ?))";
+      dbConn.query(sql, [gender, ccUid, ccUid, constants.matchRequestStatus.accepted], function (err, result) {
         if (err) {
           res.status(200).jsonp({ message: 'Cannot get your recommended users, please try again' });
         } else {

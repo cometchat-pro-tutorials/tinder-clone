@@ -4,6 +4,6 @@ const matchRequestsRoutes = require("./requests");
 
 module.exports = function ({ app, dbConn, upload, constants }) {
   authRoutes({ app, dbConn });
-  userRoutes({ app, dbConn, upload });
+  userRoutes({ app, dbConn, upload, constants });
   matchRequestsRoutes({ app, dbConn, constants });
 };

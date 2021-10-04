@@ -19,13 +19,6 @@ window.addEventListener("DOMContentLoaded", function () {
     const mainCardActions = document.getElementById("main__card-actions")
     const dislikeBtn = document.getElementById("dislike");
     const likeBtn = document.getElementById("like");
-    
-    // match requests dialog
-    const requestsEmpty = document.getElementById("requests__empty");
-    const requestsBtn = document.getElementById("requests-trigger");
-    const requestsCloseBtn = document.getElementById("requests__close");
-    const requestsContainer = document.getElementById("requests");
-    const requestsListContainer = document.getElementById("requests__container");
 
     // main left messages
     const mainLeftMessagesContainer = document.getElementById("main__left-messages");
@@ -190,7 +183,7 @@ window.addEventListener("DOMContentLoaded", function () {
               sender: {
                 avatar: authenticatedUser.avatar
               },
-              isRight: false
+              isRight: true
             }
             renderSingleMessage(sentMessage);
             // scroll to bottom.
@@ -204,10 +197,10 @@ window.addEventListener("DOMContentLoaded", function () {
     };
     
     const isRight = (message) => {
-      if (message.isRight === false) {
-        return false;
+      if (message.isRight !== null && message.isRight !== undefined) {
+        return message.isRight;
       }
-      return message.receiverId === authenticatedUser.uid;
+      return message.sender.uid === authenticatedUser.uid;
     }
 
     const renderSingleMessage = (message) => { 
@@ -369,14 +362,6 @@ window.addEventListener("DOMContentLoaded", function () {
       }
     };
 
-    const showRequests = () => {
-      requestsContainer.classList.remove("requests--hide");
-    };
-
-    const hideRequests = () => {
-      requestsContainer.classList.add("requests--hide");
-    };
-
     const createMatchRequest = (matchRequestTo, matchRequestReceiver) => {
       if (authenticatedUser && authenticatedUser.uid && authenticatedUser.name && matchRequestTo && matchRequestReceiver) {
         axios.post('/requests/create', {
@@ -384,7 +369,12 @@ window.addEventListener("DOMContentLoaded", function () {
           matchRequestSender: authenticatedUser.name,
           matchRequestTo,
           matchRequestReceiver
-        }).then(res => { }).catch(error => { });
+        }).then(res => {
+          console.log(res.data.match_request_status);
+          if (res && res.data && res.data.match_request_status && res.data.match_request_status === 1) { 
+            addFriend(authenticatedUser.uid, matchRequestTo);
+          }
+        }).catch(error => { });
       }
     }
 
@@ -476,32 +466,6 @@ window.addEventListener("DOMContentLoaded", function () {
         });
     };
 
-    const renderRequestStatus = (requestStatus) => {
-      switch (requestStatus) {
-        case 0:
-          return 'Pending';
-        case 1:
-          return 'Accepted';
-        case -1:
-          return 'Rejected';
-        default:
-          break;
-      }
-    };
-
-    const renderRequestStatusColor = (requestStatus) => {
-      switch (requestStatus) {
-        case 0:
-          return 'blue bold';
-        case 1:
-          return 'green bold';
-        case -1:
-          return 'red bold';
-        default:
-          break;
-      }
-    };
-
     const addFriend = (matchRequestFrom, matchRequestTo) => { 
       if (matchRequestFrom && matchRequestTo) {
         const url = `https://${config.CometChatAppId}.api-${config.CometChatRegion}.cometchat.io/v3.0/users/${matchRequestTo}/friends`;
@@ -515,71 +479,6 @@ window.addEventListener("DOMContentLoaded", function () {
         });
       }
     };
-
-    window.acceptMatchRequest = (matchRequestId, matchRequestFrom, matchRequestTo) => {
-      if (matchRequestId) {
-        axios.post('/requests/update', {
-          id: matchRequestId, 
-          status: 1
-        }).then(res => {
-          if (res) { 
-            loadMatchRequests();
-            addFriend(matchRequestFrom, matchRequestTo);
-          }
-        }).catch(error => {});
-      }
-    };
-
-    const renderMatchRequests = (matchRequests) => {
-      if (matchRequests && matchRequests.length !== 0) {
-        for (const request of matchRequests) {
-          if (request && request.match_request_receiver === authenticatedUser.name && request.match_request_status === 0) {
-            requestsListContainer.innerHTML += `<div class="requests__item">
-              <p>${request.match_request_sender} has sent the match request to you</p>
-              <div>
-                <button onclick="acceptMatchRequest('${request.id}', '${request.match_request_from}', '${request.match_request_to}')">Accept</button>
-              </div>
-            </div>`
-          } else {
-            requestsListContainer.innerHTML += `<div class="requests__item">
-              <p>${request.match_request_sender === authenticatedUser.name ? 'You' : request.match_request_sender} has sent the match request to ${request.match_request_receiver}</p>
-              <div>
-                <span class="${renderRequestStatusColor(request.match_request_status)}">${renderRequestStatus(request.match_request_status)}</span>
-              </div>
-            </div>`
-          }
-        }
-      }
-    };
-
-    const loadMatchRequests = () => {
-      if (authenticatedUser) {
-        axios.post('/requests/get', {
-          "ccUid": authenticatedUser.uid
-        }).then(res => {
-          if (res && res.data && res.data.length !== 0) {
-            requestsListContainer.innerHTML = '';
-            renderMatchRequests(res.data);
-            requestsEmpty.classList.add('hide');
-          }
-        }).catch(error => {
-          requestsEmpty.classList.remove('hide');
-        });
-      }
-    };
-
-    if (requestsBtn) {
-      requestsBtn.addEventListener('click', function () {
-        showRequests();
-        loadMatchRequests();
-      });
-    }
-
-    if (requestsCloseBtn) {
-      requestsCloseBtn.addEventListener('click', function () {
-        hideRequests();
-      });
-    }
 
     // add event for logout
     if (logoutButon) {

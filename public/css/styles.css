@@ -876,11 +876,11 @@ input {
 }
 
 .message__content--left {
-  background-color: #fe3c72;
+  background-color: #D1D5DB;
 }
 
 .message__content--right {
-  background-color: #D1D5DB;
+  background-color: #fe3c72;
 }
 
 #callScreen {
