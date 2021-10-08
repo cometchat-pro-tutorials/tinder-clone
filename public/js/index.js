@@ -41,8 +41,9 @@ window.addEventListener("DOMContentLoaded", function () {
     const callScreen = document.getElementById("callScreen");
 
     let listenerID = null;
-    let upcomingCall=  null;
+    let upcomingCall = null;
     let selectedContact = null;
+    let notificationListenerID = authenticatedUser.uid;
 
     const rejectCall = (status, sessionId) => {
       CometChat.rejectCall(sessionId, status).then(
@@ -65,7 +66,7 @@ window.addEventListener("DOMContentLoaded", function () {
       callingDialog.classList.add("calling--hide");
     };
 
-    const listenForCall = () => { 
+    const listenForCall = () => {
       listenerID = uuid.v4();
       CometChat.addCallListener(
         listenerID,
@@ -100,10 +101,10 @@ window.addEventListener("DOMContentLoaded", function () {
       const sessionId = call.sessionId;
       const callType = call.type;
       const callSettings = new CometChat.CallSettingsBuilder()
-                                          .setSessionID(sessionId)
-                                          .enableDefaultLayout(true)
-                                          .setIsAudioOnlyCall(callType == 'audio' ? true : false)
-                                          .build();
+        .setSessionID(sessionId)
+        .enableDefaultLayout(true)
+        .setIsAudioOnlyCall(callType == 'audio' ? true : false)
+        .build();
       CometChat.startCall(
         callSettings,
         document.getElementById("callScreen"),
@@ -167,6 +168,28 @@ window.addEventListener("DOMContentLoaded", function () {
       }
     }
 
+    const sendNotification = ({ message, type, receiverId }) => {
+      const receiverID = receiverId;
+      const customType = type;
+      const receiverType = CometChat.RECEIVER_TYPE.USER;
+      const customData = {
+        message
+      };
+      const customMessage = new CometChat.CustomMessage(
+        receiverID,
+        receiverType,
+        customType,
+        customData
+      );
+
+      CometChat.sendCustomMessage(customMessage).then(
+        message => {
+        },
+        error => {
+        }
+      );
+    };
+
     const sendMessage = (inputMessage) => {
       if (inputMessage) {
         // call cometchat service to send the message.
@@ -177,6 +200,12 @@ window.addEventListener("DOMContentLoaded", function () {
         );
         CometChat.sendMessage(message).then(
           msg => {
+            const notificationMessage = {
+              message: `There is a new message from ${authenticatedUser.name}`,
+              type: 'newMessage',
+              receiverId: selectedContact.uid
+            };
+            sendNotification(notificationMessage);
             // append new message on the UI.
             const sentMessage = {
               text: inputMessage,
@@ -188,14 +217,14 @@ window.addEventListener("DOMContentLoaded", function () {
             renderSingleMessage(sentMessage);
             // scroll to bottom.
             scrollToBottom();
-          }, 
+          },
           error => {
             alert('Cannot send you message, please try later');
           }
         );
       }
     };
-    
+
     const isRight = (message) => {
       if (message.isRight !== null && message.isRight !== undefined) {
         return message.isRight;
@@ -203,8 +232,8 @@ window.addEventListener("DOMContentLoaded", function () {
       return message.sender.uid === authenticatedUser.uid;
     }
 
-    const renderSingleMessage = (message) => { 
-      if (message && isRight(message)) { 
+    const renderSingleMessage = (message) => {
+      if (message && isRight(message)) {
         messageContainer.innerHTML += `
           <div class="message__right">
             <div class="message__content message__content--right">
@@ -215,7 +244,7 @@ window.addEventListener("DOMContentLoaded", function () {
             </div>
           </div>
         `;
-      } else { 
+      } else {
         messageContainer.innerHTML += `
           <div class="message__left">
             <div class="message__avatar">
@@ -231,11 +260,13 @@ window.addEventListener("DOMContentLoaded", function () {
 
     const renderMessages = (messages) => {
       if (messages && messages.length !== 0) {
-        messages.forEach(message => { 
-          if (message && (!message.category || message.category !== 'call')) {
+        messages.forEach(message => {
+          if (message && (!message.category || (message.category !== 'call' && message.category !== 'custom'))) {
             renderSingleMessage(message);
           }
         });
+        // scroll to bottom.
+        scrollToBottom();
       }
     };
 
@@ -250,15 +281,34 @@ window.addEventListener("DOMContentLoaded", function () {
       messagesRequest
         .fetchPrevious()
         .then((messages) => {
-          if (messages && messages.length !== 0) { 
+          if (messages && messages.length !== 0) {
             renderMessages(messages);
           }
         })
-        .catch((error) => {});
+        .catch((error) => { });
     };
 
-    isCurrentUser = (selectedContact, selectedUid) => { 
+    isCurrentUser = (selectedContact, selectedUid) => {
       return selectedContact && selectedUid && selectedContact.uid && selectedContact.uid === selectedUid;
+    };
+
+    const listenForNotifications = () => {
+      CometChat.addMessageListener(
+        notificationListenerID,
+        new CometChat.MessageListener({
+          onCustomMessageReceived: customMessage => {
+            console.log("Custom message received successfully", customMessage);
+            // Handle custom message
+            if (!selectedContact || (customMessage && customMessage.sender && customMessage.sender.uid && customMessage.sender.uid !== selectedContact.uid && customMessage.data && customMessage.data.customData && customMessage.data.customData.message)) {
+              // Display an info toast with no title
+              toastr.info(customMessage.data.customData.message);
+              if (customMessage && customMessage.type && customMessage.type === 'match') {
+                loadFriends();
+              }
+            }
+          }
+        })
+      );
     };
 
     const listenForMessages = () => {
@@ -304,7 +354,7 @@ window.addEventListener("DOMContentLoaded", function () {
         });
       }
     };
-    
+
     const loadFriends = () => {
       const appSetting = new CometChat.AppSettingsBuilder()
         .subscribePresenceForAllUsers()
@@ -324,7 +374,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 mainLeftEmpty.classList.add('hide');
                 mainLeftMessagesContainer.innerHTML = '';
                 renderFriends(userList);
-              } else { 
+              } else {
                 mainLeftEmpty.classList.remove('hide');
                 mainLeftEmpty.innerHTML = 'You do not have any contact';
               }
@@ -370,9 +420,8 @@ window.addEventListener("DOMContentLoaded", function () {
           matchRequestTo,
           matchRequestReceiver
         }).then(res => {
-          console.log(res.data.match_request_status);
-          if (res && res.data && res.data.match_request_status && res.data.match_request_status === 1) { 
-            addFriend(authenticatedUser.uid, matchRequestTo);
+          if (res && res.data && res.data.match_request_status && res.data.match_request_status === 1) {
+            addFriend(authenticatedUser.uid, matchRequestTo, matchRequestReceiver);
           }
         }).catch(error => { });
       }
@@ -387,8 +436,8 @@ window.addEventListener("DOMContentLoaded", function () {
       const matchRequestReceiver = $(element).attr('data-name');
       createMatchRequest(matchRequestTo, matchRequestReceiver);
       setTimeout(() => {
-        shouldHideMainCard();  
-       }, 1100);
+        shouldHideMainCard();
+      }, 1100);
     };
 
     const swipeLeft = (element) => {
@@ -397,8 +446,8 @@ window.addEventListener("DOMContentLoaded", function () {
       $(element).append('<div class="status dislike">Dislike!</div>');
       $(element).next().removeClass('rotate-left rotate-right').fadeIn(400);
       setTimeout(() => {
-        shouldHideMainCard();  
-       }, 1100);
+        shouldHideMainCard();
+      }, 1100);
     };
 
     const applySwing = () => {
@@ -436,7 +485,7 @@ window.addEventListener("DOMContentLoaded", function () {
       mainCardEmptyMessage.classList.add('hide');
     };
 
-    const hideMainCard = () => { 
+    const hideMainCard = () => {
       mainCardActions.classList.add('hide');
       mainCardItemContainer.classList.add('hide');
       mainCardEmptyMessage.classList.remove('hide');
@@ -466,15 +515,25 @@ window.addEventListener("DOMContentLoaded", function () {
         });
     };
 
-    const addFriend = (matchRequestFrom, matchRequestTo) => { 
+    const addFriend = (matchRequestFrom, matchRequestTo, matchRequestReceiver) => {
       if (matchRequestFrom && matchRequestTo) {
         const url = `https://${config.CometChatAppId}.api-${config.CometChatRegion}.cometchat.io/v3.0/users/${matchRequestTo}/friends`;
-        axios.post(url, { accepted: [matchRequestFrom] }, {headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          appId: `${config.CometChatAppId}`,
-          apiKey: `${config.CometChatAPIKey}`,
-        }}).then(res => {
+        axios.post(url, { accepted: [matchRequestFrom] }, {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            appId: `${config.CometChatAppId}`,
+            apiKey: `${config.CometChatAPIKey}`,
+          }
+        }).then(res => {
+          const notificationMessage = {
+            message: `Congratulation! ${authenticatedUser.name} and ${matchRequestReceiver} have been matched`,
+            type: 'match',
+            receiverId: matchRequestTo
+          };
+          toastr.info(notificationMessage.message);
+          loadFriends();
+          sendNotification(notificationMessage);
         }).catch(error => {
         });
       }
@@ -514,8 +573,8 @@ window.addEventListener("DOMContentLoaded", function () {
         if (currentCard) {
           swipeRight(currentCard);
           setTimeout(() => {
-            shouldHideMainCard();  
-           }, 1100);
+            shouldHideMainCard();
+          }, 1100);
         } else {
           hideMainCard();
         }
@@ -523,7 +582,7 @@ window.addEventListener("DOMContentLoaded", function () {
     }
 
     if (chatBoxClose) {
-      chatBoxClose.addEventListener('click', function() {
+      chatBoxClose.addEventListener('click', function () {
         messageContainer.innerHTML = '';
         chatBox.classList.add("hide");
         CometChat.removeMessageListener(selectedContact.uid);
@@ -534,8 +593,8 @@ window.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    $("#message-input").keyup(function(e){
-      if(e.keyCode == 13) {
+    $("#message-input").keyup(function (e) {
+      if (e.keyCode == 13) {
         const inputMessage = e.target.value;
         if (inputMessage) {
           sendMessage(inputMessage);
@@ -551,7 +610,7 @@ window.addEventListener("DOMContentLoaded", function () {
     }
 
     if (videoCallBtn) {
-      videoCallBtn.addEventListener('click', function () { 
+      videoCallBtn.addEventListener('click', function () {
         initCall(CometChat.CALL_TYPE.VIDEO);
       });
     }
@@ -574,7 +633,7 @@ window.addEventListener("DOMContentLoaded", function () {
     }
 
     if (rejectCallBtn) {
-      rejectCallBtn.addEventListener('click', function () { 
+      rejectCallBtn.addEventListener('click', function () {
         const status = CometChat.CALL_STATUS.REJECTED;
         rejectCall(status, upcomingCall.sessionId);
       });
@@ -583,6 +642,7 @@ window.addEventListener("DOMContentLoaded", function () {
     showHeaderInformation();
     loadRecommendedUsers();
     loadFriends();
+    listenForNotifications();
   } else {
     // redirect user to the login page.
     window.location.href = "/login.html";

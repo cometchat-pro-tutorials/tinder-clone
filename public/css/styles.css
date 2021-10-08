@@ -979,3 +979,7 @@ input {
 .accepted {
   background: #60A5FA;
 }
+
+.toast-info {
+  background-color: #fe3c72 !important;
+}
