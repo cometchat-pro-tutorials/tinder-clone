@@ -200,12 +200,6 @@ window.addEventListener("DOMContentLoaded", function () {
         );
         CometChat.sendMessage(message).then(
           msg => {
-            const notificationMessage = {
-              message: `There is a new message from ${authenticatedUser.name}`,
-              type: 'newMessage',
-              receiverId: selectedContact.uid
-            };
-            sendNotification(notificationMessage);
             // append new message on the UI.
             const sentMessage = {
               text: inputMessage,
@@ -261,7 +255,7 @@ window.addEventListener("DOMContentLoaded", function () {
     const renderMessages = (messages) => {
       if (messages && messages.length !== 0) {
         messages.forEach(message => {
-          if (message && (!message.category || (message.category !== 'call' && message.category !== 'custom'))) {
+          if (message) {
             renderSingleMessage(message);
           }
         });
@@ -273,6 +267,8 @@ window.addEventListener("DOMContentLoaded", function () {
     const loadMessages = () => {
       const limit = 50;
       const messageRequestBuilder = new CometChat.MessagesRequestBuilder()
+        .setCategories(["message"])
+        .setTypes(["text"])
         .setLimit(limit)
       messageRequestBuilder.setUID(selectedContact.uid);
 
@@ -296,6 +292,16 @@ window.addEventListener("DOMContentLoaded", function () {
       CometChat.addMessageListener(
         notificationListenerID,
         new CometChat.MessageListener({
+          onTextMessageReceived: (message) => {
+            if (message && (!message.category || message.category !== 'call')) {
+              const senderUid = message.sender.uid;
+              if (selectedContact && selectedContact.uid === senderUid) {
+                renderSingleMessage(message);
+              } else {
+                toastr.info(`There is new message from ${message.sender.name}`);
+              }
+            }
+          },
           onCustomMessageReceived: customMessage => {
             console.log("Custom message received successfully", customMessage);
             // Handle custom message
@@ -311,21 +317,6 @@ window.addEventListener("DOMContentLoaded", function () {
       );
     };
 
-    const listenForMessages = () => {
-      if (selectedContact && selectedContact.uid) {
-        CometChat.addMessageListener(
-          selectedContact.uid,
-          new CometChat.MessageListener({
-            onTextMessageReceived: (message) => {
-              if (message && (!message.category || message.category !== 'call')) {
-                renderSingleMessage(message);
-              }
-            },
-          })
-        );
-      }
-    }
-
     window.openChatBox = (selectedUid, name, avatar) => {
       if (selectedUid && name && avatar && !isCurrentUser(selectedContact, selectedUid)) {
         selectedContact = { uid: selectedUid };
@@ -334,7 +325,6 @@ window.addEventListener("DOMContentLoaded", function () {
         chatBoxUserAvatar.src = avatar;
         messageContainer.innerHTML = '';
         loadMessages();
-        listenForMessages();
         listenForCall();
       }
     }
