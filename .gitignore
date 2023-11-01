@@ -1,6 +1,6 @@
 # Config
 config.js
-**/img/
+**/img/*
 # Logs
 logs
 *.log
